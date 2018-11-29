@@ -1,6 +1,8 @@
 """Linear Regression Module"""
 
+# Import dependencies.
 import numpy as np
+from ..utils.features import normalize, add_polynomials
 
 
 class LinearRegression:
@@ -166,73 +168,28 @@ class LinearRegression:
         return predictions
 
     @staticmethod
-    def prepare_data(data, polynomial_degree=0):
+    def prepare_data(data, polynomial_degree):
         """Prepares data set for training on prediction"""
 
         # Calculate the number of examples.
-        num_examples = data.shape[0]
+        (num_examples, num_features) = data.shape
 
         # Prevent original data from being modified.
         data_processed = np.copy(data)
 
-        # Add polynomial features to data set if needed.
-        data_processed = LinearRegression.add_polynomial_features(data_processed, polynomial_degree)
+        # Add polynomial features to data set.
+        if num_features >= 2 and polynomial_degree >= 2:
+            (first_half, second_half) = np.split(data_processed, 2, axis=1)
+            data_processed = add_polynomials(first_half, second_half, polynomial_degree)
 
         # Normalize data set.
         (
             data_processed,
             features_mean,
             features_deviation
-        ) = LinearRegression.normalize_features(data_processed)
+        ) = normalize(data_processed)
 
         # Add a column of ones to X.
         data_processed = np.hstack((np.ones((num_examples, 1)), data_processed))
 
         return data_processed, features_mean, features_deviation
-
-    @staticmethod
-    def normalize_features(data):
-        """Normalize input features.
-
-        Normalizes the features in x. Returns a normalized version of x where the mean value of
-        each feature is 0 and deviation is 1.
-
-        :param data: training set of features.
-        :return: normalized set of features.
-        """
-
-        # Copy original array to prevent it from changes.
-        data_normalized = np.copy(data)
-
-        # Get average values for each feature (column) in X.
-        features_mean = np.mean(data, 0)
-
-        # Calculate the standard deviation for each feature.
-        features_deviation = np.std(data, 0)
-
-        # Subtract mean values from each feature (column) of every example (row)
-        # to make all features be spread around zero.
-        data_normalized -= features_mean
-
-        # Normalize each feature values for each example so that all features
-        # are close to [-1:1] boundaries.
-        data_normalized /= features_deviation
-
-        return data_normalized, features_mean, features_deviation
-
-    @staticmethod
-    def add_polynomial_features(data, polynomial_degree):
-        """Extends data set with polynomial features of certain degree
-
-        :param data: data set.
-        :param polynomial_degree: the max power of new features.
-        """
-
-        poly_data = np.copy(data)
-
-        for degree in range(polynomial_degree):
-            for poly_index in range(degree):
-                polynomials = (poly_data ** (degree - poly_index)) * (poly_data ** poly_index)
-                poly_data = np.hstack((poly_data, polynomials))
-
-        return poly_data
